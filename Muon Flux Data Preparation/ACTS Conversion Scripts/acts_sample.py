@@ -5,7 +5,8 @@ import pandas as pd
 import ROOT as r
 
 inputdir = "nmuon_acts.root"
-outdir ="nmuon_acts_sample.root"
+outdir = "nmuon_acts_sample.root"
+sample = 50000
 
 def GenerateACTSData(inputdir, outdir, sample = 0, nmuon = True):
 
@@ -192,4 +193,4 @@ def GenerateACTSData(inputdir, outdir, sample = 0, nmuon = True):
 
     return 0
 
-GenerateACTSData(inputdir, outdir, sample=100000)
+GenerateACTSData(inputdir, outdir, sample=sample)
