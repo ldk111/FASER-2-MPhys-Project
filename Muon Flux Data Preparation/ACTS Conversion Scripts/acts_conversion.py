@@ -228,10 +228,10 @@ def GenerateACTSData(inputdir, outdir, sample = 0, nmuon = True):
         pt_mu = tree_mu["pt"].array()[index]
 
     if nmuon == True:
-        particle_type_value = -13
+        particle_type_value = 13
         q_value = -1
     else:
-        particle_type_value = 13
+        particle_type_value = -13
         q_value = 1
 
     n_list_muon=len(px_mu)
