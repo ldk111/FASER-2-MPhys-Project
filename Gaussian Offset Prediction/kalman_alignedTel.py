@@ -178,8 +178,10 @@ def runTruthTrackingKalman(
 #
     return s
 
-def runACTS(index, offset_z, offset_y, field, digiConfigFile, trackingGeometry, inputParticlePath, rand_):
+def runACTS(args):
 
+    index, offset_z, offset_y, field, digiConfigFile, trackingGeometry, inputParticlePath, rand_ = args
+    
     detector_misal, trackingGeometry_misal, decorators_misal = acts.examples.AlignedTelescopeDetector.create(
             bounds=[500, 1500], positions=[10000, 10500, 11000, 19500, 20000, 20500], binValue=0, offsets=[offset_z, offset_y], thickness=4,rnd=rand_, 
             sigmaInPlane=0.0 , sigmaOutPlane=0.0 , sigmaOutRot=0.0 , sigmaInRot=0.00 
@@ -190,7 +192,8 @@ def runACTS(index, offset_z, offset_y, field, digiConfigFile, trackingGeometry, 
         trackingGeometry_misal=trackingGeometry_misal,
         field=field,
         digiConfigFile=digiConfigFile,
-        outputDir="output/gaussian_offset_" + index,
+        #outputDir = "output/parallelisation_test",
+        outputDir="output/parallelisation_test/" + str(index),
         # outputDir="./Output_ttk/Out9",
         inputParticlePath=inputParticlePath,
     ).run()
@@ -205,8 +208,8 @@ def main():
 
     rand_ = random.randint(0, 50000)
 
-    offsets_y = np.loadtxt("offsets_y.csv", delimiter = ",")
-    offsets_z = np.loadtxt("offsets_z.csv", delimiter = ",")
+    offsets_y = np.loadtxt("/data/atlassmallfiles/users/chri6112/Batch Jobs/offsets_y.csv", delimiter = ",")
+    offsets_z = np.loadtxt("/data/atlassmallfiles/users/chri6112/Batch Jobs/offsets_z.csv", delimiter = ",")
 
     digiConfigFile= "/data/atlassmallfiles/users/chri6112/Acts/acts/Examples/Algorithms/Digitization/share/default-smearing-config-telescope.json"
 
@@ -214,10 +217,13 @@ def main():
 
     field = acts.RestrictedBField(acts.Vector3(0* u.T, 0, 1.0 * u.T))
 
-    input_args = list(zip(np.arange(0, len(offsets_y)), offsets_z, offsets_y, itertools.repeat(field), itertools.repeat(digiConfigFile), itertools.repeat(trackingGeometry), itertools.repeat(inputParticlePath), itertools.repeat(rand_)))
-    
-    with concurrent.futures.ProcessPoolExecutor(max_workers = 8) as executor:
+    input_args = list(zip(np.arange(0, 10), offsets_z, offsets_y, itertools.repeat(field), itertools.repeat(digiConfigFile), itertools.repeat(trackingGeometry), itertools.repeat(inputParticlePath), itertools.repeat(rand_)))
+
+    print(input_args)
+    with concurrent.futures.ThreadPoolExecutor(max_workers = 8) as executor:
         executor.map(runACTS, input_args)
+   
+    #runACTS(0, offsets_z[0], offsets_y[0], field, digiConfigFile, trackingGeometry, inputParticlePath, rand_)
 
 if "__main__" == __name__:
 
