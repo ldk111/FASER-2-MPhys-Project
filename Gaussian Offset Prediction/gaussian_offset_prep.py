@@ -2,7 +2,7 @@ import numpy as np
 
 def generate_offsets(axis, n = 50, sigma = 0.1):
     offsets = np.random.normal(loc = 0, scale = sigma, size = (n, 6))
-    offsets[:, 0] = 0
+    offsets[:, 5] = 0
     np.savetxt("offsets_" + axis + ".csv", offsets, delimiter = ",")
     return offsets
 
