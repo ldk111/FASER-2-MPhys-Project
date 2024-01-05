@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 import random
 import numpy as np
-import concurrent.futures()
+import concurrent.futures
 import itertools
 
 import acts
