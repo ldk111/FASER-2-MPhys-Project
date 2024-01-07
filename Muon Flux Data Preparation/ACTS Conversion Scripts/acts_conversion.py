@@ -47,7 +47,7 @@ def GenerateMuonData(filepath, tree, mu_minus, outdir_path):
     pz = ydircos*p
     px = p*np.sqrt(1-xdircos**2-ydircos**2)
 
-    vx = z*10 - np.min(z)*10 + 28.3*100
+    vx = z*10 - np.min(z)*10 - 28.3*1000
     vy = -x*10 
     vz = y*10
 
