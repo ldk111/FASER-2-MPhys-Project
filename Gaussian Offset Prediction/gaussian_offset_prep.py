@@ -20,6 +20,8 @@ def generate_test_offsets(axis):
 if __name__ == "__main__":
     offsets_y = generate_offsets(axis = "y", n = 50, sigma = 0.2)
     offsets_z = generate_offsets(axis = "z", n = 50, sigma = 0.2)
+    offsets_x = generate_offsets(axis = "x", n = 50, sigma = 0.2)
 
     offsets_test_y = generate_test_offsets("y")
     offsets_test_z = generate_test_offsets("z")
+    offsets_test_x = generate_test_offsets("x")
