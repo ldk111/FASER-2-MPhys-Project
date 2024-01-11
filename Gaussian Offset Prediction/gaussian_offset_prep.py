@@ -10,11 +10,11 @@ def generate_test_offsets(axis):
     offsets = np.zeros((12, 6))
     if axis == "y":
         for i in range(0, 6):
-            offsets[i,i] = 0.2
+            offsets[i,i] = 0.05
     else:
         for i in range(6, 12):
-            offsets[i,i-6] = 0.2
-    np.savetxt("offsets_test_" + axis + ".csv", offsets, delimiter = ",")
+            offsets[i,i-6] = 0.05
+    np.savetxt("offsets_test2_" + axis + ".csv", offsets, delimiter = ",")
     return offsets
 
 if __name__ == "__main__":
