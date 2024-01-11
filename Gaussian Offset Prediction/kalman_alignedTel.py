@@ -97,7 +97,26 @@ def runTruthTrackingKalman(
         field,
         digiConfigFile=digiConfigFile,
         rnd=rnd,
+        #outputDirRoot=str(outputDir / "digitisation")
     )
+
+    #s.addWriter(
+    #    acts.examples.RootSimHitWriter(
+    #        level=acts.logging.INFO,
+    #        inputSimHits="simhits",
+    #        filePath=str(outputDir / "simhits.root"),
+    #        
+    #    )
+    #)
+
+    #added to try and read in partway through
+    #s.addReader(
+    #        acts.examples.RootSimHitReader(
+    #            filePath=str(outputDir / "simhits.root"),
+    #            treeName="hits",
+    #            simHitCollection="simhits",
+    #        )
+    #    )
 
     addSeeding(
         s,
@@ -110,6 +129,7 @@ def runTruthTrackingKalman(
             nHits=(5, None),
             eta=(-0.5,0.5)
         ),
+        #outputDirRoot=str(outputDir / "seeding")
     )
 
     addKalmanTracks(
@@ -180,22 +200,20 @@ def runTruthTrackingKalman(
 
 def runACTS(args):
 
-    index, offset_z, offset_y, field, digiConfigFile, trackingGeometry, inputParticlePath, rand_ = args
+    index, offset_x, offset_y, offset_z, field, digiConfigFile, trackingGeometry, inputParticlePath, rand_, outputPath = args
     
     detector_misal, trackingGeometry_misal, decorators_misal = acts.examples.AlignedTelescopeDetector.create(
-            bounds=[500, 1500], positions=[10000, 10500, 11000, 19500, 20000, 20500], binValue=0, offsets=[offset_z, offset_y], thickness=4,rnd=rand_, 
+            bounds=[500, 1500], positions=[10000, 10500, 11000, 19500, 20000, 20500], binValue=0, offsets=[offset_z, -offset_y, offset_x], thickness=4,rnd=rand_, 
             sigmaInPlane=0.0 , sigmaOutPlane=0.0 , sigmaOutRot=0.0 , sigmaInRot=0.00 
         )
 
     runTruthTrackingKalman(
-        trackingGeometry=trackingGeometry,
-        trackingGeometry_misal=trackingGeometry_misal,
-        field=field,
-        digiConfigFile=digiConfigFile,
-        #outputDir = "output/parallelisation_test",
-        outputDir="output/parallelisation_test/" + str(index),
-        # outputDir="./Output_ttk/Out9",
-        inputParticlePath=inputParticlePath,
+        trackingGeometry = trackingGeometry,
+        trackingGeometry_misal = trackingGeometry_misal,
+        field = field,
+        digiConfigFile = digiConfigFile,
+        outputDir = outputPath + str(index),
+        inputParticlePath = inputParticlePath,
     ).run()
 
 def main():
@@ -208,22 +226,36 @@ def main():
 
     rand_ = random.randint(0, 50000)
 
-    offsets_y = np.loadtxt("/data/atlassmallfiles/users/chri6112/Batch Jobs/offsets_y.csv", delimiter = ",")
-    offsets_z = np.loadtxt("/data/atlassmallfiles/users/chri6112/Batch Jobs/offsets_z.csv", delimiter = ",")
+    outputPath = "output/110124_50_500k@200k/"
 
+    offsets_x = np.loadtxt(outputPath + "offsets_x.csv", delimiter = ",")
+    offsets_y = np.loadtxt(outputPath + "offsets_y.csv", delimiter = ",")
+    offsets_z = np.loadtxt(outputPath + "offsets_z.csv", delimiter = ",")
+    
     digiConfigFile= "/data/atlassmallfiles/users/chri6112/Acts/acts/Examples/Algorithms/Digitization/share/default-smearing-config-telescope.json"
 
-    inputParticlePath = Path("/home/chri6112/Downloads/nmuon_acts_sample_200k.root")
+    inputParticlePath = Path("/home/chri6112/Downloads/nmuon_acts_sample_500k.root")
 
     field = acts.RestrictedBField(acts.Vector3(0* u.T, 0, 1.0 * u.T))
 
-    input_args = list(zip(np.arange(0, 10), offsets_z, offsets_y, itertools.repeat(field), itertools.repeat(digiConfigFile), itertools.repeat(trackingGeometry), itertools.repeat(inputParticlePath), itertools.repeat(rand_)))
+    input_args = list(zip(np.arange(0, 1), offsets_x, offsets_y, offsets_z, itertools.repeat(field), itertools.repeat(digiConfigFile), itertools.repeat(trackingGeometry), itertools.repeat(inputParticlePath), itertools.repeat(rand_), itertools.repeat(outputPath)))
 
-    print(input_args)
-    with concurrent.futures.ThreadPoolExecutor(max_workers = 8) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers = 50) as executor:
         executor.map(runACTS, input_args)
-   
-    #runACTS(0, offsets_z[0], offsets_y[0], field, digiConfigFile, trackingGeometry, inputParticlePath, rand_)
+
+    #detector_misal, trackingGeometry_misal, decorators_misal = acts.examples.AlignedTelescopeDetector.create(
+    #        bounds=[500, 1500], positions=[10000, 10500, 11000, 19500, 20000, 20500], binValue=0, offsets=[offsets_z[0], -offsets_y[0], offsets_x[0]], thickness=4,rnd=rand_, 
+    #        sigmaInPlane=0.0 , sigmaOutPlane=0.0 , sigmaOutRot=0.0 , sigmaInRot=0.00 
+    #    )
+
+    #runTruthTrackingKalman(
+    #    trackingGeometry=trackingGeometry,
+    #    trackingGeometry_misal=trackingGeometry_misal,
+    #    field=field,
+    #    digiConfigFile=digiConfigFile,
+    #    outputDir="output/y_2_05_offset_test/2",
+    #    inputParticlePath=inputParticlePath,
+    #).run()
 
 if "__main__" == __name__:
 
