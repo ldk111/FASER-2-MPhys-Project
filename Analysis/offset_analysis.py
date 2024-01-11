@@ -237,6 +237,7 @@ def Summarise_DataFrame(df, offsets_y, offsets_z, plots = False):
         print("PERCENTAGE DIFFERENCE: " + str(REL_ERR_Y))
         print("\nZ AXIS")
         print("PREDICTED OFFSET: " + str(PRED_OFFSET_Z))
+        print("TRUE OFFSET: " + str(TRUE_OFFSET_Z))
         print("RESIDUAL: " + str(RESIDUAL_Z))
         print("PERCENTAGE DIFFERENCE: " + str(REL_ERR_Z))
         print("\n")
