@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
+from scipy.stats import norm
 import uproot
 import awkward as ak
 
@@ -103,8 +104,33 @@ def Generate_DataFrame_From_ROOT(input_dir, i):
 
     return df
 
-import numpy as np
-from scipy.stats import norm
+def Propagate_B_Field(px, py, pz, e, B, dx):
+
+    pz_prime = pz
+
+    c = 299792458
+    e = 1.60217663*10**(-19)*e
+
+    px = px*e/c*10**9
+    py = py*e/c*10**9
+    pz = pz*e/c*10**9
+
+    dx = dx/1000
+
+    wt = -np.arccos((dx*e*B + py)/(np.sqrt(px**2 + py**2))) + np.arctan2(px, py)
+
+    px_prime = (px * np.cos(wt) - py * np.sin(wt))*c/(e*10**9)
+
+    py_prime = (px * np.sin(wt) + py * np.cos(wt))*c/(e*10**9)
+
+    dx = dx*1000
+
+    dy = (- px/(e*B) * np.cos(wt) + py/(e*B) * np.sin(wt) + px/(e*B))*1000
+
+    dz = (wt/(e*B) * pz) * 1000
+
+    return px_prime, py_prime, pz_prime, dx, dy, dz
+
 
 def Fit_Gaussian(x):
 
@@ -189,6 +215,23 @@ def Generate_Predicted_Offset_DataFrame(df):
 
         PRED_Y = i * delta_y + df["GLOBAL_Y_HIT_1"]
         PRED_Z = i * delta_z + df["GLOBAL_Z_HIT_1"]
+
+        output_dict["PRED_Y_" + str(i+1)] = PRED_Y
+        output_dict["PRED_OFFSET_Y_" + str(i+1)] = PRED_Y - df["GLOBAL_Y_HIT_" + str(i+1)]
+
+        output_dict["PRED_Z_" + str(i+1)] = PRED_Z 
+        output_dict["PRED_OFFSET_Z_" + str(i+1)] = PRED_Z - df["GLOBAL_Z_HIT_" + str(i+1)]
+
+
+    PX_PRIME, PY_PRIME, PZ_PRIME, DX, DY, DZ = Propagate_B_Field(df["FIT_PX_1"], df["FIT_PY_1"], df["FIT_PZ_1"], 1, 1, 4000)
+
+    delta_y_prime = PY_PRIME/PX_PRIME * (df["GLOBAL_X_HIT_2"].mean() - df["GLOBAL_X_HIT_1"].mean())
+    delta_z_prime = PZ_PRIME/PX_PRIME * (df["GLOBAL_X_HIT_2"].mean() - df["GLOBAL_X_HIT_1"].mean())
+
+    for i in range(3, 6):
+
+        PRED_Y = 3 * delta_y + df["GLOBAL_Y_HIT_1"] + DY + 4000 * PY_PRIME/PX_PRIME + (i-3) * delta_y_prime 
+        PRED_Z = 3 * delta_z + df["GLOBAL_Z_HIT_1"] + DZ + 4000 * PZ_PRIME/PX_PRIME + (i-3) * delta_z_prime 
 
         output_dict["PRED_Y_" + str(i+1)] = PRED_Y
         output_dict["PRED_OFFSET_Y_" + str(i+1)] = PRED_Y - df["GLOBAL_Y_HIT_" + str(i+1)]
@@ -292,3 +335,4 @@ def Analyse_Multiple_Runs(input_dir, n_samples, offsets_y, offsets_z, plots = Fa
     np.savetxt(input_dir + "pred_offsets_z_.csv", pred_offsets_z, delimiter = ",")
 
     return pred_offsets_y, pred_offsets_z
+
