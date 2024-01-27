@@ -51,6 +51,8 @@ def Generate_DataFrame_From_ROOT(input_dir, i):
 
     P_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_p"].array()))
     Q_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_charge"].array()))
+    PX_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_px"].array()))
+    PY_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_py"].array()))
     PZ_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_pz"].array()))
     PHI_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_phi"].array()))
     THETA_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_theta"].array()))
@@ -65,7 +67,7 @@ def Generate_DataFrame_From_ROOT(input_dir, i):
 
     df_columns = [
                 "QOP_FIT", "PHI_FIT", "THETA_FIT", "P_FIT", "PZ_FIT", 
-                "P_TRUTH", "Q_TRUTH", "PZ_TRUTH", "PHI_TRUTH", "THETA_TRUTH", 
+                "P_TRUTH", "Q_TRUTH", "PX_TRUTH", "PY_TRUTH", "PZ_TRUTH", "PHI_TRUTH", "THETA_TRUTH", 
                 "CHI2SUM", "NDF", 
                 "FIT_PX_6", "FIT_PX_5", "FIT_PX_4", "FIT_PX_3", "FIT_PX_2", "FIT_PX_1",
                 "FIT_PY_6", "FIT_PY_5", "FIT_PY_4", "FIT_PY_3", "FIT_PY_2", "FIT_PY_1",
@@ -83,7 +85,7 @@ def Generate_DataFrame_From_ROOT(input_dir, i):
 
     df_data = [
                 QOP_FIT, PHI_FIT, THETA_FIT, P_FIT, PZ_FIT,
-                P_TRUTH, Q_TRUTH, PZ_TRUTH, PHI_TRUTH, THETA_TRUTH, 
+                P_TRUTH, Q_TRUTH, PX_TRUTH, PY_TRUTH, PZ_TRUTH, PHI_TRUTH, THETA_TRUTH, 
                 CHI2SUM, NDF, 
                 FIT_PX[:,0], FIT_PX[:,1], FIT_PX[:,2], FIT_PX[:,3], FIT_PX[:,4], FIT_PX[:,5], 
                 FIT_PY[:,0], FIT_PY[:,1], FIT_PY[:,2], FIT_PY[:,3], FIT_PY[:,4], FIT_PY[:,5], 
@@ -100,6 +102,7 @@ def Generate_DataFrame_From_ROOT(input_dir, i):
     ]
 
     df = pd.DataFrame(data=np.column_stack(df_data), columns=df_columns)
+    df.dropna(subset=["GLOBAL_Z_HIT_6"], inplace=True, ignore_index=True)
     df.to_csv(output_path)
 
     return df
@@ -111,23 +114,23 @@ def Propagate_B_Field(px, py, pz, e, B, dx):
     c = 299792458
     e = 1.60217663*10**(-19)*e
 
-    px = px*e/c*10**9
-    py = py*e/c*10**9
-    pz = pz*e/c*10**9
+    #px = px/c*10**9
+    #py = py/c*10**9
+    #pz = pz/c*10**9
 
     dx = dx/1000
 
-    wt = -np.arccos((dx*e*B + py)/(np.sqrt(px**2 + py**2))) + np.arctan2(px, py)
+    wt = -np.arccos((dx*B*c/10**9 + py)/(np.sqrt(px**2 + py**2))) + np.arctan2(px, py)
 
-    px_prime = (px * np.cos(wt) - py * np.sin(wt))*c/(e*10**9)
+    px_prime = (px * np.cos(wt) - py * np.sin(wt))
 
-    py_prime = (px * np.sin(wt) + py * np.cos(wt))*c/(e*10**9)
+    py_prime = (px * np.sin(wt) + py * np.cos(wt))
 
     dx = dx*1000
 
-    dy = (- px/(e*B) * np.cos(wt) + py/(e*B) * np.sin(wt) + px/(e*B))*1000
+    dy = (- px/(B*c/10**9) * np.cos(wt) + py/(B*c/10**9) * np.sin(wt) + px/(B*c/10**9))*1000
 
-    dz = (wt/(e*B) * pz) * 1000
+    dz = (wt/(B*c/10**9) * pz) * 1000
 
     return px_prime, py_prime, pz_prime, dx, dy, dz
 
@@ -208,8 +211,13 @@ def Generate_Predicted_Offset_DataFrame(df):
         output_dict["PRED_Z_" + str(i)] = np.zeros(len(df))
         output_dict["PRED_OFFSET_Z_" + str(i)] = np.zeros(len(df))
 
-    delta_y = df["FIT_PY_1"]/df["FIT_PX_1"]*(df["GLOBAL_X_HIT_2"].mean() - df["GLOBAL_X_HIT_1"].mean())
-    delta_z = df["FIT_PZ_1"]/df["FIT_PX_1"]*(df["GLOBAL_X_HIT_2"].mean() - df["GLOBAL_X_HIT_1"].mean())
+    #Using average did not seem to improve performance.
+    PY = df["FIT_PY_1"] #+df["FIT_PY_2"]+df["FIT_PY_3"])/3
+    PZ = df["FIT_PZ_1"] #+df["FIT_PZ_2"]+df["FIT_PZ_3"])/3
+    PX = df["FIT_PX_1"] #+df["FIT_PX_2"]+df["FIT_PX_3"])/3
+
+    delta_y = PY/PX*(df["GLOBAL_X_HIT_2"].mean() - df["GLOBAL_X_HIT_1"].mean())
+    delta_z = PZ/PX*(df["GLOBAL_X_HIT_2"].mean() - df["GLOBAL_X_HIT_1"].mean())
 
     for i in range(1, 3):
 
@@ -223,7 +231,7 @@ def Generate_Predicted_Offset_DataFrame(df):
         output_dict["PRED_OFFSET_Z_" + str(i+1)] = PRED_Z - df["GLOBAL_Z_HIT_" + str(i+1)]
 
 
-    PX_PRIME, PY_PRIME, PZ_PRIME, DX, DY, DZ = Propagate_B_Field(df["FIT_PX_1"], df["FIT_PY_1"], df["FIT_PZ_1"], 1, 1, 4000)
+    PX_PRIME, PY_PRIME, PZ_PRIME, DX, DY, DZ = Propagate_B_Field(PX, PY, PZ, 1, 1, 4000)
 
     delta_y_prime = PY_PRIME/PX_PRIME * (df["GLOBAL_X_HIT_2"].mean() - df["GLOBAL_X_HIT_1"].mean())
     delta_z_prime = PZ_PRIME/PX_PRIME * (df["GLOBAL_X_HIT_2"].mean() - df["GLOBAL_X_HIT_1"].mean())
@@ -253,8 +261,8 @@ def Summarise_DataFrame(df, offsets_y, offsets_z, plots = False):
 
     for i in range(0, 6):
 
-        PRED_OFFSET_Y = np.mean(df["PRED_OFFSET_Y_" + str(i+1)][np.abs(df["PRED_OFFSET_Y_" + str(i+1)]) < 1])
-        PRED_OFFSET_Z = np.mean(df["PRED_OFFSET_Z_" + str(i+1)][np.abs(df["PRED_OFFSET_Z_" + str(i+1)]) < 1])
+        PRED_OFFSET_Y = np.median(df["PRED_OFFSET_Y_" + str(i+1)][np.abs(df["PRED_OFFSET_Y_" + str(i+1)]) < 1])
+        PRED_OFFSET_Z = np.median(df["PRED_OFFSET_Z_" + str(i+1)][np.abs(df["PRED_OFFSET_Z_" + str(i+1)]) < 1])
 
         TRUE_OFFSET_Y = offsets_y[i]
         TRUE_OFFSET_Z = offsets_z[i]
@@ -315,24 +323,35 @@ def Analyse_Run(input_dir, i, offsets_y, offsets_z, plots = False):
 
     pred_offsets_y, pred_offsets_z = Summarise_DataFrame(df_offsets, offsets_y, offsets_z, plots)
 
-    return pred_offsets_y, pred_offsets_z
+    return pred_offsets_y, pred_offsets_z, df, df_offsets
 
 def Analyse_Multiple_Runs(input_dir, n_samples, offsets_y, offsets_z, plots = False):
     
     pred_offsets_y = np.array([])
     pred_offsets_z = np.array([])
 
+    first = True
+
     for i in range(0, n_samples):
 
         print("\nANALYSING DATAFRAME: " + str(i) + "\n")
 
-        pred_offsets_y_i, pred_offsets_z_i = Analyse_Run(input_dir, i, offsets_y[i], offsets_z[i], plots)
+        pred_offsets_y_i, pred_offsets_z_i, _df, _df_offsets = Analyse_Run(input_dir, i, offsets_y[i], offsets_z[i], plots)
+
+        if first == True:
+            first = False
+            df_offsets = _df_offsets
+        else:
+            df_offsets = pd.concat([df_offsets, _df_offsets], ignore_index=True)
 
         pred_offsets_y = np.append(pred_offsets_y, pred_offsets_y_i)
         pred_offsets_z = np.append(pred_offsets_z, pred_offsets_z_i)
 
+    pred_offsets_y = np.array(np.hsplit(pred_offsets_y, n_samples))
+    pred_offsets_z = np.array(np.hsplit(pred_offsets_z, n_samples))
+
     np.savetxt(input_dir + "pred_offsets_y_.csv", pred_offsets_y, delimiter = ",")
     np.savetxt(input_dir + "pred_offsets_z_.csv", pred_offsets_z, delimiter = ",")
 
-    return pred_offsets_y, pred_offsets_z
+    return pred_offsets_y, pred_offsets_z, df_offsets
 
