@@ -52,8 +52,9 @@ def Transformation_Function(parameters, untransformed_data):
     dz = parameters[5]
 
     #Apply transformation parameterised by the 3 rotation angles and 3 offsets
-    transformed_data_y = (cz*cx - sz*sy*sx)*(untransformed_data[0] + dy) - sx*cy*(untransformed_data[1] + dz) + (sz*cx + cz*sx*sy) * dx
-    transformed_data_z = (cz*sx + cx*sz*sy)*(untransformed_data[0] + dy) + cx*cy*(untransformed_data[1] + dz) + (sz*sx - cx*cz*sy) * dx
+
+    transformed_data_y = (sx*sy*sz + cx*cz)*(untransformed_data[0]) + dy + (cx*sy*sz-sx*cz)*(untransformed_data[1]) - ((sx*sy*cz-sz*cx)*untransformed_data[0] + (cx*sy*cz+sz*sx)*untransformed_data[1] + dx)*untransformed_data[2]/untransformed_data[4]
+    transformed_data_z = (sx*cy)*(untransformed_data[0]) + dz + (cx*cy)*(untransformed_data[1]) - ((sx*sy*cz-sz*cx)*untransformed_data[0] + (cx*sy*cz+sz*sx)*untransformed_data[1] + dx)*untransformed_data[3]/untransformed_data[4]
 
     transformed_data = np.array([transformed_data_y, transformed_data_z])
 
@@ -77,7 +78,7 @@ def Find_Best_Transform(untransformed_data, transformed_data, initial_guess, bou
     return result
 
 
-def Fit_Offsets(df, plane, initial_guess = np.random.uniform(-0.1, 0.1, 6), bounds = [(-np.pi/8, np.pi/8),(-np.pi/8, np.pi/8),(-np.pi/8, np.pi/8),(-1, 1),(-1, 1),(-1, 1)]):
+def Fit_Offsets(df, plane, initial_guess = np.random.uniform(-0.1, 0.1, 6), bounds = [(-np.pi/32, np.pi/32),(-np.pi/32, np.pi/32),(-np.pi/32, np.pi/32),(-1, 1),(-1, 1),(-1, 1)]):
     """
     Find the transformation parameters that minimize the residuals for the given tracking plane and return result and goodness of fit.
 
@@ -92,7 +93,7 @@ def Fit_Offsets(df, plane, initial_guess = np.random.uniform(-0.1, 0.1, 6), boun
     - sum_of_residuals_squared: Sum of squared residuals between the transformed predicted hit location and measured hit location.
     """
     #This is the predicted location assuming no offsets
-    untransformed_data = np.array([df["PRED_Y_" + str(plane)].values, df["PRED_Z_" + str(plane)].values])
+    untransformed_data = np.array([df["PRED_Y_" + str(plane)].values, df["PRED_Z_" + str(plane)].values], df["FIT_PY_" + str(plane)].values, df["FIT_PZ_" + str(plane)].values, df["FIT_PX_" + str(plane)].values)
 
     #This is the measured hit on the offset geometry
     transformed_data = np.array([df["HIT_Y_"+ str(plane)].values, df["HIT_Z_"+ str(plane)].values])

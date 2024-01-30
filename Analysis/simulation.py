@@ -234,7 +234,19 @@ def Generate_Predicted_Offset_DataFrame(df):
  
                     "HIT_Z_1": [], "HIT_Z_2": [], "HIT_Z_3": [], "HIT_Z_4": [], "HIT_Z_5": [], "HIT_Z_6": [], 
                     "PRED_Z_1": [], "PRED_Z_2": [], "PRED_Z_3": [], "PRED_Z_4": [], "PRED_Z_5": [], "PRED_Z_6": [],
+
+                    #"FIT_PX_1": df["FIT_PX_1"].values, "FIT_PX_2": df["FIT_PX_2"].values, "FIT_PX_3": df["FIT_PX_3"].values, "FIT_PX_4": df["FIT_PX_4"].values, "FIT_PX_5": df["FIT_PX_5"].values, "FIT_PX_6": df["FIT_PX_6"].values,
+                    #"FIT_PX_1": df["FIT_PY_1"].values, "FIT_PY_2": df["FIT_PY_2"].values, "FIT_PY_3": df["FIT_PY_3"].values, "FIT_PY_4": df["FIT_PY_4"].values, "FIT_PY_5": df["FIT_PY_5"].values, "FIT_PY_6": df["FIT_PY_6"].values,
+                    #"FIT_PX_1": df["FIT_PZ_1"].values, "FIT_PZ_2": df["FIT_PZ_2"].values, "FIT_PZ_3": df["FIT_PZ_3"].values, "FIT_PZ_4": df["FIT_PZ_4"].values, "FIT_PZ_5": df["FIT_PZ_5"].values, "FIT_PZ_6": df["FIT_PZ_6"].values,
+                    
+                    "FIT_PX_1": df["FIT_PY_1"], "FIT_PX_2": df["FIT_PY_1"], "FIT_PX_3": df["FIT_PY_1"], "FIT_PX_4": [], "FIT_PX_5": [], "FIT_PX_6": [],
+                    "FIT_PX_1": df["FIT_PZ_1"], "FIT_PY_2": df["FIT_PZ_1"], "FIT_PY_3": df["FIT_PZ_1"], "FIT_PY_4": [], "FIT_PY_5": [], "FIT_PY_6": [],
+                    "FIT_PX_1": df["FIT_PX_1"], "FIT_PZ_2": df["FIT_PX_1"], "FIT_PZ_3": df["FIT_PX_1"], "FIT_PZ_4": [], "FIT_PZ_5": [], "FIT_PZ_6": [],
     }
+
+    #Initial tracking plane is assumed to be aligned correctly
+    output_dict["PRED_Y_1"] = df["GLOBAL_Y_HIT_1"]
+    output_dict["PRED_Z_1"] = df["GLOBAL_Z_HIT_1"]
 
     #For each tracking plane, we extract the measured hit positions
     for i in range(1, 7):
@@ -243,7 +255,7 @@ def Generate_Predicted_Offset_DataFrame(df):
         output_dict["HIT_Z_" + str(i)] = df["GLOBAL_Z_HIT_" + str(i)]
 
     #Defining input variables for simulation, using momentum as fitted for the first plane
-    PY = df["FIT_PY_1"] 
+    PY = df["FIT_PY_1"]
     PZ = df["FIT_PZ_1"]
     PX = df["FIT_PX_1"]
 
@@ -278,6 +290,10 @@ def Generate_Predicted_Offset_DataFrame(df):
 
         output_dict["PRED_Y_" + str(i+1)] = PRED_Y
         output_dict["PRED_Z_" + str(i+1)] = PRED_Z 
+
+        output_dict["FIT_PX_" + str(i+1)] = PX_PRIME
+        output_dict["FIT_PY_" + str(i+1)] = PY_PRIME
+        output_dict["FIT_PZ_" + str(i+1)] = PZ_PRIME
         
     #Creates output dataframe from dictionary    
     output_df = pd.DataFrame(output_dict)
