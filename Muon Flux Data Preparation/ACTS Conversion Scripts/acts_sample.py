@@ -1,12 +1,15 @@
+import sys
+sys.path.insert(0, "../pythonPackages")
+
 import uproot
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import ROOT as r
 
-inputdir = "nmuon_acts.root"
-outdir = "nmuon_acts_sample.root"
-sample = 50000
+inputdir = "nmuon_acts_new.root"
+outdir ="nmuon_acts_sample_500k.root"
+sample = 500000
 
 def GenerateACTSData(inputdir, outdir, sample = 0, nmuon = True):
 
@@ -142,20 +145,20 @@ def GenerateACTSData(inputdir, outdir, sample = 0, nmuon = True):
         particle_id.push_back(4503599644147712)
         particle_type.push_back(particle_type_value)  # Assign 13 or -13 depending on the charge
         process.push_back(0)
-        vx.push_back(vx_mu[i])        
-        vy.push_back(vy_mu[i])       #vertex_y'>vertex_x'->-vertex_z  IMPORTANT2 and IMPORTANT1
-        vz.push_back(vz_mu[i])        #vertex_z' ->-vertex_x-> vertex_y  *IMPORTANT1 and IMPORTANT2  
+        vx.push_back(vx_mu[i][0])        
+        vy.push_back(vy_mu[i][0])       #vertex_y'>vertex_x'->-vertex_z  IMPORTANT2 and IMPORTANT1
+        vz.push_back(vz_mu[i][0])        #vertex_z' ->-vertex_x-> vertex_y  *IMPORTANT1 and IMPORTANT2  
         vt.push_back(0)               # vt is not specified in the muon data, fill it with some value
-        px.push_back(px_mu[i])        #pz'->px
-        py.push_back(py_mu[i])       #py'->px'->-pz
-        pz.push_back(pz_mu[i])        #pz'->-px->py
+        px.push_back(px_mu[i][0])        #pz'->px
+        py.push_back(py_mu[i][0])       #py'->px'->-pz
+        pz.push_back(pz_mu[i][0])        #pz'->-px->py
         m.push_back(0.1056583745)     # mass of muon in GeV
         q.push_back(q_value) # charge of muon
-        eta.push_back(eta_mu[i])
-        phi.push_back(phi_mu[i])
-        theta.push_back(theta_mu[i])
-        pt.push_back(pt_mu[i])
-        p.push_back(p_mu[i])
+        eta.push_back(eta_mu[i][0])
+        phi.push_back(phi_mu[i][0])
+        theta.push_back(theta_mu[i][0])
+        pt.push_back(pt_mu[i][0])
+        p.push_back(p_mu[i][0])
         vertex_primary.push_back(1)
         vertex_secondary.push_back(0)
         particle.push_back(1)
