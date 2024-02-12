@@ -37,7 +37,7 @@ def Process_Coords(input_ak_array):
     """
     return Shift_NaNs(ak.to_numpy(ak.pad_none(input_ak_array, target = 6, clip=True)).filled(np.nan))
     
-def Generate_DataFrame_From_ROOT(input_dir, i):
+def Generate_DataFrame_From_ROOT(input_dir, i, n_inputs):
     """
     Creates a pandas dataframe from the output of a run of kalman_alignedTel.py
 
@@ -49,19 +49,147 @@ def Generate_DataFrame_From_ROOT(input_dir, i):
     - df: The pandas dataframe with columns required for analysis, for details see below.
     """
 
+    first = True
+
     #Save results to the input directory with dataframe labelled by index
     output_path = input_dir + "df" + str(i) + ".csv"
 
-    #Set path for ACTS results
+    for j in range(0, n_inputs):
+
+        #Set path for ACTS results
+        trackstates_path = input_dir + str(i) + "/" + str(j) + "/trackstates_fitter.root"
+        tracksummary_path = input_dir + str(i) + "/" + str(j) + "/tracksummary_fitter.root"
+        #trackstates_path = input_dir + str(i) + "/trackstates_fitter.root"
+        #tracksummary_path = input_dir + str(i) + "/tracksummary_fitter.root"
+        #Open trackstates first and extract any data we want measurements for at each plane
+        file = uproot.open(trackstates_path)
+        tree_input = file["trackstates"]
+
+        #Each variable we want to anaylse is extracted as an awkward array and then processed using Process_Coords into a numpy array
+        #To add more variables look within the ROOT file and add the column as demonstrated below
+        X_TRUTH = Process_Coords(tree_input["t_x"].array())
+        GLOBAL_X_HIT = Process_Coords(tree_input["g_x_hit"].array())
+        FIT_X_HIT = Process_Coords(tree_input["g_x_smt"].array())
+
+        Y_TRUTH = Process_Coords(tree_input["t_y"].array())
+        GLOBAL_Y_HIT = Process_Coords(tree_input["g_y_hit"].array())
+        FIT_Y_HIT = Process_Coords(tree_input["g_y_smt"].array())
+        LOCAL_Y_HIT = Process_Coords(tree_input["l_y_hit"].array())
+
+        Z_TRUTH = Process_Coords(tree_input["t_z"].array())
+        GLOBAL_Z_HIT = Process_Coords(tree_input["g_z_hit"].array())
+        FIT_Z_HIT = Process_Coords(tree_input["g_z_smt"].array())
+        LOCAL_Z_HIT = Process_Coords(-tree_input["l_x_hit"].array())
+
+        FIT_PX = Process_Coords(tree_input["px_smt"].array())
+        FIT_PY = Process_Coords(tree_input["py_smt"].array())
+        FIT_PZ = Process_Coords(tree_input["pz_smt"].array())
+
+        file.close()
+
+        #Repeat process with tracksummary, this time each array contains only one entry as value is for particle not per station
+        file = uproot.open(tracksummary_path)
+        tree_input = file["tracksummary"]
+
+        #Each variable is extracted as an array, flattened to 1D and then converted to a numpy array
+        #Again to add more variables look within the ROOT file and add below as demonstrated
+        QOP_FIT = ak.to_numpy(ak.flatten(tree_input["eQOP_fit"].array()))
+        PHI_FIT = ak.to_numpy(ak.flatten(tree_input["ePHI_fit"].array()))
+        THETA_FIT = ak.to_numpy(ak.flatten(tree_input["eTHETA_fit"].array()))
+
+        P_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_p"].array()))
+        Q_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_charge"].array()))
+        PX_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_px"].array()))
+        PY_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_py"].array()))
+        PZ_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_pz"].array()))
+        PHI_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_phi"].array()))
+        THETA_TRUTH = ak.to_numpy(ak.flatten(tree_input["t_theta"].array()))
+
+        CHI2SUM = ak.to_numpy(ak.flatten(tree_input["chi2Sum"].array()))
+        NDF = ak.to_numpy(ak.flatten(tree_input["NDF"].array()))
+
+        file.close()
+
+        #This might need to be slightly edited due to using Q_TRUTH, should look for a Q_FIT value
+        P_FIT = np.abs(1/QOP_FIT)
+
+        #Add any more derived quantities wanted here
+        PZ_FIT = P_FIT*np.cos(THETA_FIT)
+        Q_FIT = np.sign(QOP_FIT).astype(int)
+
+        #Specifies the columns we want in our dataframe, generally try and match the names to variables extracted above
+        df_columns = [
+                    "QOP_FIT", "PHI_FIT", "THETA_FIT", "P_FIT", "PZ_FIT", "Q_FIT",
+                    "P_TRUTH", "Q_TRUTH", "PX_TRUTH", "PY_TRUTH", "PZ_TRUTH", "PHI_TRUTH", "THETA_TRUTH", 
+                    "CHI2SUM", "NDF", 
+                    "FIT_PX_6", "FIT_PX_5", "FIT_PX_4", "FIT_PX_3", "FIT_PX_2", "FIT_PX_1",
+                    "FIT_PY_6", "FIT_PY_5", "FIT_PY_4", "FIT_PY_3", "FIT_PY_2", "FIT_PY_1",
+                    "FIT_PZ_6", "FIT_PZ_5", "FIT_PZ_4", "FIT_PZ_3", "FIT_PZ_2", "FIT_PZ_1", 
+                    "X_TRUTH_6", "X_TRUTH_5", "X_TRUTH_4", "X_TRUTH_3", "X_TRUTH_2", "X_TRUTH_1", 
+                    "GLOBAL_X_HIT_6", "GLOBAL_X_HIT_5", "GLOBAL_X_HIT_4", "GLOBAL_X_HIT_3", "GLOBAL_X_HIT_2", "GLOBAL_X_HIT_1",
+                    "FIT_X_HIT_6", "FIT_X_HIT_5", "FIT_X_HIT_4", "FIT_X_HIT_3", "FIT_X_HIT_2", "FIT_X_HIT_1", 
+                    "Y_TRUTH_6", "Y_TRUTH_5", "Y_TRUTH_4", "Y_TRUTH_3", "Y_TRUTH_2", "Y_TRUTH_1", 
+                    "GLOBAL_Y_HIT_6", "GLOBAL_Y_HIT_5", "GLOBAL_Y_HIT_4", "GLOBAL_Y_HIT_3", "GLOBAL_Y_HIT_2", "GLOBAL_Y_HIT_1", 
+                    "LOCAL_Y_HIT_6", "LOCAL_Y_HIT_5", "LOCAL_Y_HIT_4", "LOCAL_Y_HIT_3", "LOCAL_Y_HIT_2", "LOCAL_Y_HIT_1", 
+                    "FIT_Y_HIT_6", "FIT_Y_HIT_5", "FIT_Y_HIT_4", "FIT_Y_HIT_3", "FIT_Y_HIT_2", "FIT_Y_HIT_1",
+                    "Z_TRUTH_6", "Z_TRUTH_5", "Z_TRUTH_4", "Z_TRUTH_3", "Z_TRUTH_2", "Z_TRUTH_1", 
+                    "GLOBAL_Z_HIT_6", "GLOBAL_Z_HIT_5", "GLOBAL_Z_HIT_4", "GLOBAL_Z_HIT_3", "GLOBAL_Z_HIT_2", "GLOBAL_Z_HIT_1",
+                    "LOCAL_Z_HIT_6", "LOCAL_Z_HIT_5", "LOCAL_Z_HIT_4", "LOCAL_Z_HIT_3", "LOCAL_Z_HIT_2", "LOCAL_Z_HIT_1",
+                    "FIT_Z_HIT_6", "FIT_Z_HIT_5", "FIT_Z_HIT_4", "FIT_Z_HIT_3", "FIT_Z_HIT_2", "FIT_Z_HIT_1"
+        ]
+        
+        #Adds the data to the dataframe, note that the output of Process_Coords returns the coordinate data in the reverse order to what you might expect
+        #1st column is 6th tracking plane, 2nd column 5th tracking plane etc
+        df_data = [
+                    QOP_FIT, PHI_FIT, THETA_FIT, P_FIT, PZ_FIT, Q_FIT,
+                    P_TRUTH, Q_TRUTH, PX_TRUTH, PY_TRUTH, PZ_TRUTH, PHI_TRUTH, THETA_TRUTH, 
+                    CHI2SUM, NDF, 
+                    FIT_PX[:,0], FIT_PX[:,1], FIT_PX[:,2], FIT_PX[:,3], FIT_PX[:,4], FIT_PX[:,5], 
+                    FIT_PY[:,0], FIT_PY[:,1], FIT_PY[:,2], FIT_PY[:,3], FIT_PY[:,4], FIT_PY[:,5], 
+                    FIT_PZ[:,0], FIT_PZ[:,1], FIT_PZ[:,2], FIT_PZ[:,3], FIT_PZ[:,4], FIT_PZ[:,5], 
+                    X_TRUTH[:,0], X_TRUTH[:,1], X_TRUTH[:,2], X_TRUTH[:,3], X_TRUTH[:,4], X_TRUTH[:,5], 
+                    GLOBAL_X_HIT[:,0], GLOBAL_X_HIT[:,1], GLOBAL_X_HIT[:,2], GLOBAL_X_HIT[:,3], GLOBAL_X_HIT[:,4], GLOBAL_X_HIT[:,5], 
+                    FIT_X_HIT[:,0], FIT_X_HIT[:,1], FIT_X_HIT[:,2], FIT_X_HIT[:,3], FIT_X_HIT[:,4], FIT_X_HIT[:,5],  
+                    Y_TRUTH[:,0], Y_TRUTH[:,1], Y_TRUTH[:,2], Y_TRUTH[:,3], Y_TRUTH[:,4], Y_TRUTH[:,5], 
+                    GLOBAL_Y_HIT[:,0], GLOBAL_Y_HIT[:,1], GLOBAL_Y_HIT[:,2], GLOBAL_Y_HIT[:,3], GLOBAL_Y_HIT[:,4], GLOBAL_Y_HIT[:,5],
+                    LOCAL_Y_HIT[:,0], LOCAL_Y_HIT[:,1], LOCAL_Y_HIT[:,2], LOCAL_Y_HIT[:,3], LOCAL_Y_HIT[:,4], LOCAL_Y_HIT[:,5],
+                    FIT_Y_HIT[:,0], FIT_Y_HIT[:,1], FIT_Y_HIT[:,2], FIT_Y_HIT[:,3], FIT_Y_HIT[:,4], FIT_Y_HIT[:,5],  
+                    Z_TRUTH[:,0], Z_TRUTH[:,1], Z_TRUTH[:,2], Z_TRUTH[:,3], Z_TRUTH[:,4], Z_TRUTH[:,5], 
+                    GLOBAL_Z_HIT[:,0], GLOBAL_Z_HIT[:,1], GLOBAL_Z_HIT[:,2], GLOBAL_Z_HIT[:,3], GLOBAL_Z_HIT[:,4], GLOBAL_Z_HIT[:,5],
+                    LOCAL_Z_HIT[:,0], LOCAL_Z_HIT[:,1], LOCAL_Z_HIT[:,2], LOCAL_Z_HIT[:,3], LOCAL_Z_HIT[:,4], LOCAL_Z_HIT[:,5],
+                    FIT_Z_HIT[:,0], FIT_Z_HIT[:,1], FIT_Z_HIT[:,2], FIT_Z_HIT[:,3], FIT_Z_HIT[:,4], FIT_Z_HIT[:,5],  
+        ]
+
+        #Creates a dataframe from the above dictionary and array
+        df = pd.DataFrame(data=np.column_stack(df_data), columns=df_columns)
+
+        #This removes any rows in place that did not reach the end of the detector by specifying that the hit position in the final plane is not NaN
+        df.dropna(subset=["GLOBAL_Z_HIT_6"], inplace=True, ignore_index=True)
+        #df = df[df["P_FIT"] > 1000]# & (df["CHI2SUM"] < 15)]
+        #df = df[np.abs((df["PX_TRUTH"] - df["FIT_PX_1"])/df["PX_TRUTH"]) < 0.001]
+        #df.reset_index(inplace=True, drop=True)
+
+        if first == True:
+            df_output = df
+            first = False
+        else:
+            df_output = pd.concat([df_output, df], ignore_index = True)
+
+    #Saves dataframe as CSV
+    #Comment this for now while we test various filtering options
+    df_output.to_csv(output_path)
+
+    return df_output
+
+def Generate_Repropagation_DataFrame_From_ROOT(input_dir, i):
+
+    output_path = input_dir + "df" + str(i) + ".csv"
     trackstates_path = input_dir + str(i) + "/trackstates_fitter.root"
     tracksummary_path = input_dir + str(i) + "/tracksummary_fitter.root"
 
-    #Open trackstates first and extract any data we want measurements for at each plane
     file = uproot.open(trackstates_path)
     tree_input = file["trackstates"]
 
-    #Each variable we want to anaylse is extracted as an awkward array and then processed using Process_Coords into a numpy array
-    #To add more variables look within the ROOT file and add the column as demonstrated below
     X_TRUTH = Process_Coords(tree_input["t_x"].array())
     GLOBAL_X_HIT = Process_Coords(tree_input["g_x_hit"].array())
     FIT_X_HIT = Process_Coords(tree_input["g_x_smt"].array())
@@ -82,12 +210,9 @@ def Generate_DataFrame_From_ROOT(input_dir, i):
 
     file.close()
 
-    #Repeat process with tracksummary, this time each array contains only one entry as value is for particle not per station
     file = uproot.open(tracksummary_path)
     tree_input = file["tracksummary"]
 
-    #Each variable is extracted as an array, flattened to 1D and then converted to a numpy array
-    #Again to add more variables look within the ROOT file and add below as demonstrated
     QOP_FIT = ak.to_numpy(ak.flatten(tree_input["eQOP_fit"].array()))
     PHI_FIT = ak.to_numpy(ak.flatten(tree_input["ePHI_fit"].array()))
     THETA_FIT = ak.to_numpy(ak.flatten(tree_input["eTHETA_fit"].array()))
@@ -105,15 +230,12 @@ def Generate_DataFrame_From_ROOT(input_dir, i):
 
     file.close()
 
-    #This might need to be slightly edited due to using Q_TRUTH, should look for a Q_FIT value
-    P_FIT = Q_TRUTH/QOP_FIT
-
-    #Add any more derived quantities wanted here
+    P_FIT = np.abs(1/QOP_FIT)
     PZ_FIT = P_FIT*np.cos(THETA_FIT)
+    Q_FIT = np.sign(QOP_FIT).astype(int)
 
-    #Specifies the columns we want in our dataframe, generally try and match the names to variables extracted above
     df_columns = [
-                "QOP_FIT", "PHI_FIT", "THETA_FIT", "P_FIT", "PZ_FIT", 
+                "QOP_FIT", "PHI_FIT", "THETA_FIT", "P_FIT", "PZ_FIT", "Q_FIT",
                 "P_TRUTH", "Q_TRUTH", "PX_TRUTH", "PY_TRUTH", "PZ_TRUTH", "PHI_TRUTH", "THETA_TRUTH", 
                 "CHI2SUM", "NDF", 
                 "FIT_PX_6", "FIT_PX_5", "FIT_PX_4", "FIT_PX_3", "FIT_PX_2", "FIT_PX_1",
@@ -131,11 +253,9 @@ def Generate_DataFrame_From_ROOT(input_dir, i):
                 "LOCAL_Z_HIT_6", "LOCAL_Z_HIT_5", "LOCAL_Z_HIT_4", "LOCAL_Z_HIT_3", "LOCAL_Z_HIT_2", "LOCAL_Z_HIT_1",
                 "FIT_Z_HIT_6", "FIT_Z_HIT_5", "FIT_Z_HIT_4", "FIT_Z_HIT_3", "FIT_Z_HIT_2", "FIT_Z_HIT_1"
     ]
-    
-    #Adds the data to the dataframe, note that the output of Process_Coords returns the coordinate data in the reverse order to what you might expect
-    #1st column is 6th tracking plane, 2nd column 5th tracking plane etc
+
     df_data = [
-                QOP_FIT, PHI_FIT, THETA_FIT, P_FIT, PZ_FIT,
+                QOP_FIT, PHI_FIT, THETA_FIT, P_FIT, PZ_FIT, Q_FIT,
                 P_TRUTH, Q_TRUTH, PX_TRUTH, PY_TRUTH, PZ_TRUTH, PHI_TRUTH, THETA_TRUTH, 
                 CHI2SUM, NDF, 
                 FIT_PX[:,0], FIT_PX[:,1], FIT_PX[:,2], FIT_PX[:,3], FIT_PX[:,4], FIT_PX[:,5], 
@@ -154,14 +274,8 @@ def Generate_DataFrame_From_ROOT(input_dir, i):
                 FIT_Z_HIT[:,0], FIT_Z_HIT[:,1], FIT_Z_HIT[:,2], FIT_Z_HIT[:,3], FIT_Z_HIT[:,4], FIT_Z_HIT[:,5],  
     ]
 
-    #Creates a dataframe from the above dictionary and array
     df = pd.DataFrame(data=np.column_stack(df_data), columns=df_columns)
-
-    #This removes any rows in place that did not reach the end of the detector by specifying that the hit position in the final plane is not NaN
-    df.dropna(subset=["GLOBAL_Z_HIT_6"], inplace=True, ignore_index=True)
-
-    #Saves dataframe as CSV
-    df.to_csv(output_path)
+    #df.to_csv(output_path)
 
     return df
 
@@ -192,25 +306,24 @@ def Propagate_B_Field(px, py, pz, e, B, dx):
     #Magnetic field along z does not affect momentum along z
     pz_prime = pz
     
-    #Specifying required constants, c in m/s, e in Coulombs
+    #Specifying required constants, c in m/s
     c = 299792458
-    e = 1.60217663*10**(-19)*e
 
     #Converting dx to metres
     dx = dx/1000
 
     #Calculates the time the particle is present in the magnetic field (see Notion or OneNote for derivation)
-    wt = -np.arccos((dx*B*c/10**9 + py)/(np.sqrt(px**2 + py**2))) + np.arctan2(px, py)
+    wt = - e * np.arccos((e * dx*B*c/10**9 + py)/(np.sqrt(px**2 + py**2))) + e * np.arctan2(px, py)
 
     #Calculates the final momentum values in GeV/c based on time spent in magnetic field
-    px_prime = (px * np.cos(wt) - py * np.sin(wt))
-    py_prime = (px * np.sin(wt) + py * np.cos(wt))
+    px_prime = (px * np.cos(wt) - e * py * np.sin(wt))
+    py_prime = (e * px * np.sin(wt) + py * np.cos(wt))
 
     #Reconverts dx to mm
     dx = dx*1000
 
     #Calculates change in position in mm based on time spent in magnetic field
-    dy = (- px/(B*c/10**9) * np.cos(wt) + py/(B*c/10**9) * np.sin(wt) + px/(B*c/10**9))*1000
+    dy = (- e * px/(B*c/10**9) * np.cos(wt) + py/(B*c/10**9) * np.sin(wt) + e * px/(B*c/10**9))*1000
     dz = (wt/(B*c/10**9) * pz) * 1000
 
     return px_prime, py_prime, pz_prime, dx, dy, dz
@@ -229,6 +342,8 @@ def Generate_Predicted_Offset_DataFrame(df):
 
     #Initialise empty dataframe with the columns we want to have in our output dataframe, add columns here if more variables are needed
     output_dict = {
+                    "Q_FIT": df["Q_FIT"],
+
                     "HIT_Y_1": [], "HIT_Y_2": [], "HIT_Y_3": [], "HIT_Y_4": [], "HIT_Y_5": [], "HIT_Y_6": [], 
                     "PRED_Y_1": [], "PRED_Y_2": [], "PRED_Y_3": [], "PRED_Y_4": [], "PRED_Y_5": [], "PRED_Y_6": [], 
  
@@ -275,7 +390,7 @@ def Generate_Predicted_Offset_DataFrame(df):
         output_dict["PRED_Z_" + str(i+1)] = PRED_Z 
 
     #Propagate particles through the B field and retrieve their positions and momenta after the B field
-    PX_PRIME, PY_PRIME, PZ_PRIME, DX, DY, DZ = Propagate_B_Field(PX, PY, PZ, 1, 1, 4000)
+    PX_PRIME, PY_PRIME, PZ_PRIME, DX, DY, DZ = Propagate_B_Field(PX, PY, PZ, -df["Q_FIT"], 1, 4000)
 
     #Calculate new changes in y and z between the final 3 tracking planes
     delta_y_prime = PY_PRIME/PX_PRIME * 500
@@ -299,3 +414,37 @@ def Generate_Predicted_Offset_DataFrame(df):
     output_df = pd.DataFrame(output_dict)
 
     return output_df
+
+def Generate_Repropagated_Offset_Dataframe(df, input_dir, i):
+
+    df_reprop = Generate_Repropagation_DataFrame_From_ROOT(input_dir, i)
+    df_reprop.sort_values(by=["P_TRUTH"], ignore_index=True, inplace=True)
+
+    df.sort_values(by=["P_FIT"], ignore_index=True, inplace=True)
+
+    while len(df) != len(df_reprop):
+        for i in range(0, len(df["P_FIT"])):
+                if np.abs(df["P_FIT"][i] - df_reprop["P_TRUTH"][i]) > 0.001:
+                    df.drop(i, inplace=True)
+                    df.reset_index(inplace=True, drop = True)
+                    break
+
+    df = df[pd.notna(df_reprop["Y_TRUTH_6"])]
+    df_reprop = df_reprop[pd.notna(df_reprop["Y_TRUTH_6"])]
+
+    output_dict = {
+                "HIT_Y_1": df["LOCAL_Y_HIT_1"], "HIT_Y_2": df["LOCAL_Y_HIT_2"], "HIT_Y_3": df["LOCAL_Y_HIT_3"], "HIT_Y_4": df["LOCAL_Y_HIT_4"], "HIT_Y_5": df["LOCAL_Y_HIT_5"], "HIT_Y_6": df["LOCAL_Y_HIT_6"], 
+                "PRED_Y_1": df_reprop["Y_TRUTH_1"], "PRED_Y_2": df_reprop["Y_TRUTH_2"], "PRED_Y_3": df_reprop["Y_TRUTH_3"], "PRED_Y_4": df_reprop["Y_TRUTH_4"], "PRED_Y_5": df_reprop["Y_TRUTH_5"], "PRED_Y_6": df_reprop["Y_TRUTH_6"], 
+
+                "HIT_Z_1": df["LOCAL_Z_HIT_1"], "HIT_Z_2": df["LOCAL_Z_HIT_2"], "HIT_Z_3": df["LOCAL_Z_HIT_3"], "HIT_Z_4": df["LOCAL_Z_HIT_4"], "HIT_Z_5": df["LOCAL_Z_HIT_5"], "HIT_Z_6": df["LOCAL_Z_HIT_6"], 
+                "PRED_Z_1": df_reprop["Z_TRUTH_1"], "PRED_Z_2": df_reprop["Z_TRUTH_2"], "PRED_Z_3": df_reprop["Z_TRUTH_3"], "PRED_Z_4": df_reprop["Z_TRUTH_4"], "PRED_Z_5": df_reprop["Z_TRUTH_5"], "PRED_Z_6": df_reprop["Z_TRUTH_6"],
+
+                "FIT_PX_1": df_reprop["FIT_PX_1"].values, "FIT_PX_2": df_reprop["FIT_PX_2"].values, "FIT_PX_3": df_reprop["FIT_PX_3"].values, "FIT_PX_4": df_reprop["FIT_PX_4"].values, "FIT_PX_5": df_reprop["FIT_PX_5"].values, "FIT_PX_6": df_reprop["FIT_PX_6"].values,
+                "FIT_PX_1": df_reprop["FIT_PY_1"].values, "FIT_PY_2": df_reprop["FIT_PY_2"].values, "FIT_PY_3": df_reprop["FIT_PY_3"].values, "FIT_PY_4": df_reprop["FIT_PY_4"].values, "FIT_PY_5": df_reprop["FIT_PY_5"].values, "FIT_PY_6": df_reprop["FIT_PY_6"].values,
+                "FIT_PX_1": df_reprop["FIT_PZ_1"].values, "FIT_PZ_2": df_reprop["FIT_PZ_2"].values, "FIT_PZ_3": df_reprop["FIT_PZ_3"].values, "FIT_PZ_4": df_reprop["FIT_PZ_4"].values, "FIT_PZ_5": df_reprop["FIT_PZ_5"].values, "FIT_PZ_6": df_reprop["FIT_PZ_6"].values,             
+    }
+
+    df_offsets = pd.DataFrame(output_dict)
+    df_offsets = df_offsets[np.abs(df_offsets["PRED_Z_2"] - df_offsets["HIT_Z_2"]) < 10]
+
+    return df_offsets
