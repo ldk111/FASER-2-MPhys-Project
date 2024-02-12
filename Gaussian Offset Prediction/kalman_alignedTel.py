@@ -200,8 +200,8 @@ def runTruthTrackingKalman(
 
 def runACTS(args):
 
-    index, offset_x, offset_y, offset_z, rotation_x, rotation_y, rotation_z, field, digiConfigFile, trackingGeometry, inputPath, rand_, outputPath = args
-    
+    offsetIndex, inputIndex, offset_x, offset_y, offset_z, rotation_x, rotation_y, rotation_z, field, digiConfigFile, trackingGeometry, inputPath, rand_, outputPath = args
+
     detector_misal, trackingGeometry_misal, decorators_misal = acts.examples.AlignedTelescopeDetector.create(
             bounds=[500, 1500], positions=[10000, 10500, 11000, 19500, 20000, 20500], binValue=0,
             offsets=[offset_z, offset_y, offset_x], rotations=[rotation_z, rotation_y, rotation_x],
@@ -209,14 +209,29 @@ def runACTS(args):
             sigmaInPlane=0.0 , sigmaOutPlane=0.0 , sigmaOutRot=0.0 , sigmaInRot=0.00 
         )
 
-    #inputParticlePath = Path(inputPath + str(index) + ".root")
+    inputPath = Path(inputPath + str(inputIndex) + ".root")
 
     runTruthTrackingKalman(
         trackingGeometry = trackingGeometry_misal,
         trackingGeometry_misal = trackingGeometry,
         field = field,
         digiConfigFile = digiConfigFile,
-        outputDir = outputPath + str(index),
+        outputDir = outputPath + str(offsetIndex) + "/" + str(inputIndex),
+        inputParticlePath = inputPath,
+    ).run()
+
+def runACTSreprop(args):
+
+    offsetIndex, field, digiConfigFile, trackingGeometry, rand_, outputPath = args
+    
+    inputPath = Path(outputPath + str(offsetIndex) + "/repropagation.root")
+    
+    runTruthTrackingKalman(
+        trackingGeometry = trackingGeometry,
+        trackingGeometry_misal = trackingGeometry,
+        field = field,
+        digiConfigFile = digiConfigFile,
+        outputDir = outputPath + str(offsetIndex) + "/",
         inputParticlePath = inputPath,
     ).run()
 
@@ -230,8 +245,8 @@ def main():
 
     rand_ = random.randint(0, 50000)
 
-    inputParticlePath = Path("/home/chri6112/Downloads/nmuon_acts_sample_500k.root")
-    outputPath = "output/300124_5_500k@200k/"
+    #inputParticlePath = Path("/home/chri6112/Downloads/nmuon_acts_sample_200k_0.root")
+    outputPath = "output/100224_10_200k@200k_yz_13_6/"
     
     digiConfigFile= "/data/atlassmallfiles/users/chri6112/Acts/acts/Examples/Algorithms/Digitization/share/default-smearing-config-telescope.json"
 
@@ -242,14 +257,35 @@ def main():
     rotations_x = np.loadtxt(outputPath + "rotations_x.csv", delimiter=",")
     rotations_y = np.loadtxt(outputPath + "rotations_y.csv", delimiter=",")
     rotations_z = np.loadtxt(outputPath + "rotations_z.csv", delimiter=",")
+  
+    #outputPath = outputPath + "0/reprop/"
+    #inputParticlePath = Path("output/040224_1_500k@200k/0/reprop/repropagation.root")
 
-    #inputPath = "/home/chri6112/Downloads/nmuon_acts_sample_200k_"
+    field = acts.RestrictedBField(acts.Vector3(0* u.T, 0, 1.0 * u.T))# 0,0,1
 
-    field = acts.RestrictedBField(acts.Vector3(0* u.T, 0, 1.0 * u.T))
+    n_offsets = 10
+    n_inputs = 13
 
-    input_args = list(zip(np.arange(0, 5), offsets_x, offsets_y, -offsets_z, rotations_x, rotations_y, -rotations_z, itertools.repeat(field), itertools.repeat(digiConfigFile), itertools.repeat(trackingGeometry), itertools.repeat(inputParticlePath), itertools.repeat(rand_), itertools.repeat(outputPath)))
-    with concurrent.futures.ThreadPoolExecutor(max_workers = 50) as executor:
-        executor.map(runACTS, input_args)
+    inputParticlePath = "/data/atlassmallfiles/users/chri6112/Muon Flux Data/Run Data/muon_filter_200k_"
+
+    offsetIndex = np.repeat(np.arange(0, n_offsets), n_inputs)
+    inputIndex = np.tile(np.arange(0,n_inputs), n_offsets)
+
+    reprop = False
+
+    if reprop == False:
+
+        input_args = list(zip(offsetIndex, inputIndex, np.repeat(offsets_x, n_inputs, axis = 0), np.repeat(offsets_y, n_inputs, axis = 0), np.repeat(-offsets_z, n_inputs, axis = 0), np.repeat(rotations_x, n_inputs, axis = 0), np.repeat(rotations_y, n_inputs, axis = 0), np.repeat(-rotations_z, n_inputs, axis = 0), itertools.repeat(field), itertools.repeat(digiConfigFile), itertools.repeat(trackingGeometry), itertools.repeat(inputParticlePath), itertools.repeat(rand_), itertools.repeat(outputPath)))
+        print("Y")
+        with concurrent.futures.ThreadPoolExecutor(max_workers = 100) as executor:
+            executor.map(runACTS, input_args)
+
+    else:
+        increment = 40
+        input_args = list(zip(np.arange(0 + increment, n_offsets + increment), itertools.repeat(field), itertools.repeat(digiConfigFile), itertools.repeat(trackingGeometry), itertools.repeat(rand_), itertools.repeat(outputPath)))
+        with concurrent.futures.ThreadPoolExecutor(max_workers = 50) as executor:
+            executor.map(runACTSreprop, input_args)
+
 
 if "__main__" == __name__:
 
