@@ -23,7 +23,7 @@ def Objective_Function(parameters, untransformed_data, transformed_data):
     residuals = np.append(residuals, transformed_data[1] - predicted_transformed_data[1])
 
     # Return the sum of squared residuals
-    return np.sum(residuals**2)
+    return np.sum(np.abs(residuals))
 
 def Transformation_Function(parameters, untransformed_data):
     """
@@ -93,19 +93,20 @@ def Fit_Offsets(df, plane, initial_guess = np.random.uniform(-0.1, 0.1, 6), boun
     - sum_of_residuals_squared: Sum of squared residuals between the transformed predicted hit location and measured hit location.
     """
     #This is the predicted location assuming no offsets
-    untransformed_data = np.array([df["PRED_Y_" + str(plane)].values, df["PRED_Z_" + str(plane)].values], df["FIT_PY_" + str(plane)].values, df["FIT_PZ_" + str(plane)].values, df["FIT_PX_" + str(plane)].values)
+    transformed_data = np.array([df["PRED_Y_" + str(plane)].values, df["PRED_Z_" + str(plane)].values])
 
     #This is the measured hit on the offset geometry
-    transformed_data = np.array([df["HIT_Y_"+ str(plane)].values, df["HIT_Z_"+ str(plane)].values])
+    untransformed_data = np.array([df["HIT_Y_"+ str(plane)].values, df["HIT_Z_"+ str(plane)].values, df["FIT_PY_" + str(plane)].values, df["FIT_PZ_" + str(plane)].values, df["FIT_PX_" + str(plane)].values])
 
     result = Find_Best_Transform(untransformed_data, transformed_data, initial_guess, bounds)
 
     sum_of_residuals_squared = Objective_Function(result.x, untransformed_data, transformed_data)
+    sum_of_no_squared = Objective_Function([0,0,0,0,0,0], untransformed_data, transformed_data)
     
     print("Optimal transformation parameters:", result.x)
     print("Sum of squares of residuals:", sum_of_residuals_squared)
-    print("Sum of squares of residuals (no transform):", Objective_Function([0,0,0,0,0,0], untransformed_data, transformed_data))
+    print("Sum of squares of residuals (no transform):", sum_of_no_squared)
     print("\n")
 
-    return result.x, sum_of_residuals_squared
+    return result.x, sum_of_residuals_squared, sum_of_no_squared
 
