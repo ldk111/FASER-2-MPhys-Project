@@ -26,8 +26,6 @@ def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotatio
     - total_sum_of_residuals_squared: Array with the sum of the residuals squared for each plane.
     """
 
-    #
-
     #Initialise empty arrays to store outputs for each tracking plane in
     total_parameters = []
     total_sum_of_residuals_squared = []
@@ -49,37 +47,44 @@ def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotatio
     for plane in range(2, 7):
         if plane < 4:
             print("Truth transformation parameters: ", np.array([rotations_x[plane-2], rotations_y[plane-2], rotations_z[plane-2], offsets_x[plane-2], offsets_y[plane-2], offsets_z[plane-2]]))
-            parameters, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_offsets, plane, initial_guess, bounds)
+            
+            df_pred = df_offsets
+
+            if len(df_pred[df_pred["Q_FIT"] == 1]) > len(df_pred[df_pred["Q_FIT"] == -1]):
+                df_pred = pd.concat([df_pred[df_pred["Q_FIT"] == -1], df_pred[df_pred["Q_FIT"] == 1].sample(len(df_pred[df_pred["Q_FIT"] == -1]))], ignore_index = True)
+            else:
+                df_pred = pd.concat([df_pred[df_pred["Q_FIT"] == 1], df_pred[df_pred["Q_FIT"] == -1].sample(len(df_pred[df_pred["Q_FIT"] == 1]))], ignore_index = True)
+
+            parameters, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_pred, plane, initial_guess, bounds)
         else:
             print("Truth transformation parameters: ", np.array([rotations_x[plane-2], rotations_y[plane-2], rotations_z[plane-2], offsets_x[plane-2], offsets_y[plane-2], offsets_z[plane-2]]))
 
-            df_pred_1 = df_offsets
-            df_pred_2 = df_offsets[np.abs((df["PX_TRUTH"] - df["FIT_PX_1"])/df["PX_TRUTH"]) < 0.001]
-            df_pred_3 = df_offsets[(df["P_FIT"] > 1000) & (df["CHI2SUM"] < 25)]
+            df_pred = df_offsets
 
-            #if len(df_pred[df_pred["Q_FIT"] == 1]) > len(df_pred[df_pred["Q_FIT"] == -1]):
-            #    df_pred = pd.concat([df_pred[df_pred["Q_FIT"] == -1], df_pred[df_pred["Q_FIT"] == 1].sample(len(df_pred[df_pred["Q_FIT"] == -1]))], ignore_index = True)
-            #else:
-            #    df_pred = pd.concat([df_pred[df_pred["Q_FIT"] == 1], df_pred[df_pred["Q_FIT"] == -1].sample(len(df_pred[df_pred["Q_FIT"] == 1]))], ignore_index = True)
+            #df_pred_2 = df_offsets[np.abs((df["PX_TRUTH"] - df["FIT_PX_1"])/df["PX_TRUTH"]) < 0.001]
 
-            #print("FULL DATA")
-            #parameters_1, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_pred_1, plane, initial_guess, bounds)
-            print("HIGH PX RES")
-            parameters_2, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_pred_2, plane, initial_guess, bounds)
-            #print("HIGH P, LOW CHI2")
-            #parameters_3, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_pred_3, plane, initial_guess, bounds)
-            #print("FITTED POS MEAN")
-            #parameters_4 = np.array([0,0,0,0,np.mean(df["FIT_Y_HIT_"+str(plane)]-df["LOCAL_Y_HIT_"+str(plane)]),np.mean(df["FIT_Z_HIT_"+str(plane)]-df["LOCAL_Z_HIT_"+str(plane)])])
-            #print(parameters_4)
-            #print("2+4 AVERAGED")
-            #parameters_5 = (parameters_2+parameters_4)/2
-            #print(parameters_5)
-            #print("2+3 AVERAGED")
-            #parameters_6 = (parameters_2+parameters_3)/2
-            #print(parameters_6)
+            df_pred_3 = df_offsets[(df["P_FIT"] > 2500) & (df["CHI2SUM"]/df["NDF"] < 5)]
 
-            parameters = parameters_2#np.append([parameters_1],[parameters_2,parameters_3, parameters_4, parameters_5, parameters_6], axis = 0)
-            print(parameters)
+            if len(df_pred[df_pred["Q_FIT"] == 1]) > len(df_pred[df_pred["Q_FIT"] == -1]):
+                df_pred = pd.concat([df_pred[df_pred["Q_FIT"] == -1], df_pred[df_pred["Q_FIT"] == 1].sample(len(df_pred[df_pred["Q_FIT"] == -1]))], ignore_index = True)
+            else:
+                df_pred = pd.concat([df_pred[df_pred["Q_FIT"] == 1], df_pred[df_pred["Q_FIT"] == -1].sample(len(df_pred[df_pred["Q_FIT"] == 1]))], ignore_index = True)
+
+            if len(df_pred_3[df_pred_3["Q_FIT"] == 1]) > len(df_pred_3[df_pred_3["Q_FIT"] == -1]):
+                df_pred_3 = pd.concat([df_pred_3[df_pred_3["Q_FIT"] == -1], df_pred_3[df_pred_3["Q_FIT"] == 1].sample(len(df_pred_3[df_pred_3["Q_FIT"] == -1]))], ignore_index = True)
+            else:
+                df_pred_3 = pd.concat([df_pred_3[df_pred_3["Q_FIT"] == 1], df_pred_3[df_pred_3["Q_FIT"] == -1].sample(len(df_pred_3[df_pred_3["Q_FIT"] == 1]))], ignore_index = True)
+
+            print("FULL DATA")
+            parameters_1, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_pred, plane, initial_guess, bounds)
+            #print("HIGH PX RES")
+            #parameters_2, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_pred_2, plane, initial_guess, bounds)
+            print("HIGH P, LOW CHI2")
+            parameters_3, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_pred_3, plane, initial_guess, bounds)
+
+            parameters = parameters_3
+            parameters[5] = parameters_1[5]
+
         #Add the results of this plane's results to the total results
         total_parameters.append(parameters)
         total_sum_of_residuals_squared.append(sum_of_residuals_squared)
