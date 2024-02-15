@@ -5,7 +5,7 @@ import joblib
 import simulation
 import reconstruction
 
-def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotations_x, rotations_y, rotations_z, initial_guess = np.random.uniform(-0.01, 0.01, 6), bounds = [(-np.pi/8, np.pi/8),(-np.pi/8, np.pi/8),(-np.pi/8, np.pi/8),(-1, 1),(-1, 1),(-1, 1)], reprop = False):
+def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotations_x, rotations_y, rotations_z, initial_guess = np.random.uniform(-0.01, 0.01, 6), bounds = [(-np.pi/8, np.pi/8),(-np.pi/8, np.pi/8),(-np.pi/8, np.pi/8),(-1, 1),(-1, 1),(-1, 1)], reprop = False, full_data = False):
     """
     Analyses a single run from a given directory, returns the fitted parameters for each plane along with a sum of squares of the residuals between the measured and transformed coordinates.
 
@@ -48,7 +48,7 @@ def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotatio
         if plane < 4:
             print("Truth transformation parameters: ", np.array([rotations_x[plane-2], rotations_y[plane-2], rotations_z[plane-2], offsets_x[plane-2], offsets_y[plane-2], offsets_z[plane-2]]))
             
-            df_pred = df_offsets
+            df_pred = df_offsets[(df["P_FIT"] > 10) & (df["CHI2SUM"]/df["NDF"] < 5)]
 
             if len(df_pred[df_pred["Q_FIT"] == 1]) > len(df_pred[df_pred["Q_FIT"] == -1]):
                 df_pred = pd.concat([df_pred[df_pred["Q_FIT"] == -1], df_pred[df_pred["Q_FIT"] == 1].sample(len(df_pred[df_pred["Q_FIT"] == -1]))], ignore_index = True)
@@ -59,7 +59,7 @@ def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotatio
         else:
             print("Truth transformation parameters: ", np.array([rotations_x[plane-2], rotations_y[plane-2], rotations_z[plane-2], offsets_x[plane-2], offsets_y[plane-2], offsets_z[plane-2]]))
 
-            df_pred = df_offsets
+            df_pred = df_offsets[(df["P_FIT"] > 10) & (df["CHI2SUM"]/df["NDF"] < 5)]
 
             #df_pred_2 = df_offsets[np.abs((df["PX_TRUTH"] - df["FIT_PX_1"])/df["PX_TRUTH"]) < 0.001]
 
@@ -85,6 +85,9 @@ def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotatio
             parameters = parameters_3
             parameters[5] = parameters_1[5]
 
+            if full_data == True:
+                parameters = parameters_1
+
         #Add the results of this plane's results to the total results
         total_parameters.append(parameters)
         total_sum_of_residuals_squared.append(sum_of_residuals_squared)
@@ -93,7 +96,7 @@ def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotatio
     return np.array(total_parameters), np.array(total_sum_of_residuals_squared), np.array(total_sum_of_no_squared), df, df_offsets
 
 
-def Analyse_Multiple_Runs(input_dir, n_offsets, n_inputs, offsets_x, offsets_y, offsets_z, rotations_x, rotations_y, rotations_z, initial_guess = np.random.uniform(-0.01, 0.01, 6), bounds = [(-np.pi/8, np.pi/8),(-np.pi/8, np.pi/8),(-np.pi/8, np.pi/8),(-1, 1),(-1, 1),(-1, 1)], reprop = False):
+def Analyse_Multiple_Runs(input_dir, n_offsets, n_inputs, offsets_x, offsets_y, offsets_z, rotations_x, rotations_y, rotations_z, initial_guess = np.random.uniform(-0.01, 0.01, 6), bounds = [(-np.pi/8, np.pi/8),(-np.pi/8, np.pi/8),(-np.pi/8, np.pi/8),(-1, 1),(-1, 1),(-1, 1)], reprop = False, full_data = False):
     """
     Analyses a single run from a given directory, returns the fitted parameters for each plane along with a sum of squares of the residuals between the measured and transformed coordinates.
 
@@ -129,7 +132,7 @@ def Analyse_Multiple_Runs(input_dir, n_offsets, n_inputs, offsets_x, offsets_y, 
         print("\nANALYSING DATAFRAME: " + str(i) + "\n")
 
         #Retrieve the results from analysing a single run, we do not specify bounds or initial guesses here currently, instead we use the default ones from Analyse_Run
-        pred_parameters_i, total_sum_of_residuals_squared_i, total_sum_of_no_squared_i, _df, _df_offsets = Analyse_Run(input_dir, i, n_inputs, offsets_x[i], offsets_y[i], offsets_z[i], rotations_x[i], rotations_y[i], rotations_z[i], initial_guess, bounds, reprop)
+        pred_parameters_i, total_sum_of_residuals_squared_i, total_sum_of_no_squared_i, _df, _df_offsets = Analyse_Run(input_dir, i, n_inputs, offsets_x[i], offsets_y[i], offsets_z[i], rotations_x[i], rotations_y[i], rotations_z[i], initial_guess, bounds, reprop, full_data)
 
         #If this is the first run we store the output offsets dataframe as what is returned
         if first == True:

@@ -354,9 +354,9 @@ def Generate_Predicted_Offset_DataFrame(df):
                     #"FIT_PX_1": df["FIT_PY_1"].values, "FIT_PY_2": df["FIT_PY_2"].values, "FIT_PY_3": df["FIT_PY_3"].values, "FIT_PY_4": df["FIT_PY_4"].values, "FIT_PY_5": df["FIT_PY_5"].values, "FIT_PY_6": df["FIT_PY_6"].values,
                     #"FIT_PX_1": df["FIT_PZ_1"].values, "FIT_PZ_2": df["FIT_PZ_2"].values, "FIT_PZ_3": df["FIT_PZ_3"].values, "FIT_PZ_4": df["FIT_PZ_4"].values, "FIT_PZ_5": df["FIT_PZ_5"].values, "FIT_PZ_6": df["FIT_PZ_6"].values,
                     
-                    "FIT_PX_1": df["FIT_PY_1"], "FIT_PX_2": df["FIT_PY_1"], "FIT_PX_3": df["FIT_PY_1"], "FIT_PX_4": [], "FIT_PX_5": [], "FIT_PX_6": [],
-                    "FIT_PX_1": df["FIT_PZ_1"], "FIT_PY_2": df["FIT_PZ_1"], "FIT_PY_3": df["FIT_PZ_1"], "FIT_PY_4": [], "FIT_PY_5": [], "FIT_PY_6": [],
-                    "FIT_PX_1": df["FIT_PX_1"], "FIT_PZ_2": df["FIT_PX_1"], "FIT_PZ_3": df["FIT_PX_1"], "FIT_PZ_4": [], "FIT_PZ_5": [], "FIT_PZ_6": [],
+                    "FIT_PX_1": df["FIT_PX_1"], "FIT_PX_2": df["FIT_PX_1"], "FIT_PX_3": df["FIT_PX_1"], "FIT_PX_4": [], "FIT_PX_5": [], "FIT_PX_6": [],
+                    "FIT_PY_1": df["FIT_PY_1"], "FIT_PY_2": df["FIT_PY_1"], "FIT_PY_3": df["FIT_PY_1"], "FIT_PY_4": [], "FIT_PY_5": [], "FIT_PY_6": [],
+                    "FIT_PZ_1": df["FIT_PZ_1"], "FIT_PZ_2": df["FIT_PZ_1"], "FIT_PZ_3": df["FIT_PZ_1"], "FIT_PZ_4": [], "FIT_PZ_5": [], "FIT_PZ_6": [],
     }
 
     #Initial tracking plane is assumed to be aligned correctly
