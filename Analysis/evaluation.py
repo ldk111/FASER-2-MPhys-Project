@@ -56,12 +56,16 @@ def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotatio
                 df_pred = pd.concat([df_pred[df_pred["Q_FIT"] == 1], df_pred[df_pred["Q_FIT"] == -1].sample(len(df_pred[df_pred["Q_FIT"] == 1]))], ignore_index = True)
 
             parameters, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_pred, plane, initial_guess, bounds)
+            parameters_1, sum_of_residuals_squared_1, sum_of_no_squared_1 = reconstruction.Fit_Offsets(df_pred, plane, -initial_guess, bounds)
+
+            for i in range(0, len(parameters_1)):
+                if sum_of_residuals_squared_1/sum_of_no_squared_1 < sum_of_residuals_squared/sum_of_no_squared:
+                    parameters[i] = parameters_1[i]
+
         else:
             print("Truth transformation parameters: ", np.array([rotations_x[plane-2], rotations_y[plane-2], rotations_z[plane-2], offsets_x[plane-2], offsets_y[plane-2], offsets_z[plane-2]]))
 
             df_pred = df_offsets[(df["P_FIT"] > 10) & (df["CHI2SUM"]/df["NDF"] < 5)]
-
-            #df_pred_2 = df_offsets[np.abs((df["PX_TRUTH"] - df["FIT_PX_1"])/df["PX_TRUTH"]) < 0.001]
 
             df_pred_3 = df_offsets[(df["P_FIT"] > 2500) & (df["CHI2SUM"]/df["NDF"] < 5)]
 
@@ -77,10 +81,15 @@ def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotatio
 
             print("FULL DATA")
             parameters_1, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_pred, plane, initial_guess, bounds)
-            #print("HIGH PX RES")
-            #parameters_2, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_pred_2, plane, initial_guess, bounds)
+            parameters_11, sum_of_residuals_squared_11, sum_of_no_squared_11 = reconstruction.Fit_Offsets(df_pred, plane, -initial_guess, bounds)
+
             print("HIGH P, LOW CHI2")
             parameters_3, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_pred_3, plane, initial_guess, bounds)
+            parameters_31, sum_of_residuals_squared_31, sum_of_no_squared_31 = reconstruction.Fit_Offsets(df_pred_3, plane, -initial_guess, bounds)
+
+            for i in range(0, len(parameters_1)):
+                if sum_of_residuals_squared_31/sum_of_no_squared_31 < sum_of_residuals_squared/sum_of_no_squared:
+                    parameters_3[i] = parameters_31[i]
 
             parameters = parameters_3
             parameters[5] = parameters_1[5]
