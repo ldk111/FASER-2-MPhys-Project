@@ -83,6 +83,10 @@ def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotatio
             parameters_1, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_pred, plane, initial_guess, bounds)
             parameters_11, sum_of_residuals_squared_11, sum_of_no_squared_11 = reconstruction.Fit_Offsets(df_pred, plane, -initial_guess, bounds)
 
+            for i in range(0, len(parameters_1)):
+                if sum_of_residuals_squared_11/sum_of_no_squared_11 < sum_of_residuals_squared/sum_of_no_squared:
+                    parameters_1[i] = parameters_11[i]
+
             print("HIGH P, LOW CHI2")
             parameters_3, sum_of_residuals_squared, sum_of_no_squared = reconstruction.Fit_Offsets(df_pred_3, plane, initial_guess, bounds)
             parameters_31, sum_of_residuals_squared_31, sum_of_no_squared_31 = reconstruction.Fit_Offsets(df_pred_3, plane, -initial_guess, bounds)
@@ -91,9 +95,12 @@ def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotatio
                 if sum_of_residuals_squared_31/sum_of_no_squared_31 < sum_of_residuals_squared/sum_of_no_squared:
                     parameters_3[i] = parameters_31[i]
 
+            parameters_3[1] = np.sign(parameters_3[1])*np.abs(parameters_1[1])
+            parameters_3[2] = np.sign(parameters_3[2])*np.abs(parameters_1[2])
+
             parameters = parameters_3
             parameters[5] = parameters_1[5]
-
+            #NEED TO ADD IN +- CHECKING FOR FULL DATA RUNS FOR BIG OFFSETS
             if full_data == True:
                 parameters = parameters_1
 
