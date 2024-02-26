@@ -95,10 +95,18 @@ def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotatio
                 if sum_of_residuals_squared_31/sum_of_no_squared_31 < sum_of_residuals_squared/sum_of_no_squared:
                     parameters_3[i] = parameters_31[i]
 
-            parameters_3[1] = np.sign(parameters_3[1])*np.abs(parameters_1[1])
-            parameters_3[2] = np.sign(parameters_3[2])*np.abs(parameters_1[2])
+            if np.abs(parameters_1[1]) < np.abs(parameters_3[1]):
+                parameters_3[1] = np.sign(parameters_3[1])*np.abs(parameters_1[1])
+
+            if np.abs(parameters_1[2]) < np.abs(parameters_3[2]):
+                parameters_3[2] = np.sign(parameters_3[2])*np.abs(parameters_1[2])  
+
+            #parameters_3[1] = np.sign(parameters_3[1])*np.abs(parameters_1[1])  
+            #parameters_3[2] = np.sign(parameters_3[2])*np.abs(parameters_1[2])
 
             parameters = parameters_3
+            parameters[1] = 0.5*parameters[1]
+            parameters[2] = 0.5*parameters[2]
             parameters[5] = parameters_1[5]
             #NEED TO ADD IN +- CHECKING FOR FULL DATA RUNS FOR BIG OFFSETS
             if full_data == True:
