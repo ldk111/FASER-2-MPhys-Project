@@ -106,8 +106,6 @@ def Analyse_Run(input_dir, i, n_inputs, offsets_x, offsets_y, offsets_z, rotatio
             #parameters_3[2] = np.sign(parameters_3[2])*np.abs(parameters_1[2])
 
             parameters = parameters_3
-            parameters[1] = 0.5*parameters[1]
-            parameters[2] = 0.5*parameters[2]
             parameters[5] = parameters_1[5]
             #NEED TO ADD IN +- CHECKING FOR FULL DATA RUNS FOR BIG OFFSETS
             if full_data == True:
